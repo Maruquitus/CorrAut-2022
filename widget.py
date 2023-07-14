@@ -25,13 +25,11 @@ class Thread(QThread):
 
         done = False
         while True:
-            print("Running thread", self.a)
             self.a += 1
             if not done:
                 self.scanbutton.setEnabled(True)
                 self.scanbutton.setText("Escanear")
                 done = True
-                
             vid = MLM.getVideoFeed()
             frame = vid
             rgbImage = cv2.cvtColor(vid, cv2.COLOR_BGR2RGB)
@@ -218,8 +216,8 @@ class TelaPrincipal(QDialog):
 
         self.th.terminate()
             
-        while not MLM.cameraClosed():
-            MLM.stop()
+        while MLM.camera:
+            MLM.camera = None
 
         widget.addWidget(Gabarito())
 
@@ -238,6 +236,7 @@ class TelaPrincipal(QDialog):
         self.th.changePixmap.connect(self.setImage)
         self.th.scanbutton = scanbutton
         self.th.start()
+
         self.scanbutton.setCursor(Qt.PointingHandCursor)
         if s[0]: #Se der certo
             if self.gabaritoAtual < self.alunos:
