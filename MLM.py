@@ -22,7 +22,6 @@ def corrigir_perspectiva(imagem):
     # Encontrar os contornos na imagem de bordas
     contornos, _ = cv2.findContours(bordas, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-
     # Encontrar o retângulo de maior área no meio da imagem
     maior_area = 0
     retangulo = None
@@ -50,9 +49,9 @@ def corrigir_perspectiva(imagem):
     lscale_percent = 25  # percent of original size
     width = int(detection_image.shape[1] * lscale_percent / 100)
     height = int(detection_image.shape[0] * lscale_percent / 100)
-    cv2.imwrite(f"tentativas/{spec} - {str(tentativas)} r.jpg", detection_image)
-    cv2.imshow("teste", resize(detection_image, width, height))
-    cv2.waitKey(20)
+    #cv2.imwrite(f"tentativas/{spec} - {str(tentativas)} r.jpg", detection_image)
+    #cv2.imshow("teste", resize(detection_image, width, height))
+    #cv2.waitKey(20)
 
     return imagem_corrigida
 
@@ -88,16 +87,20 @@ def organizar(resultados):
 
     return certos
 
-camera = iio.get_reader("<video1>")
+
+def getCamera():
+    global camera
+    if 'camera' not in globals() or camera == None:
+        camera = iio.get_reader("<video1>")
+getCamera()
 
 def getVideoFeed():
+    global camera
+    getCamera()
     screenshot = camera.get_next_data()
     screenshot = Image.fromarray(screenshot)
     screenshot = np.array(screenshot)
-    #try:
-        #screenshot = corrigir_perspectiva(screenshot)
-    #except:
-        #pass
+
     vid = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
     frame = vid
     return frame
@@ -117,19 +120,12 @@ def scan(webcamframe, RESIZEFACTOR, s=-1):
     scale_percent = RESIZEFACTOR
     
     rts = [0, 5, -5, 3, -3]
-    #rts = [0, 0, 0, 0, 0, 0, 0]
-    scales = [90, 110, 115, 85, 95]
     rectangles = []
     rectangles2 = []
+    webcamframe = cv2.rotate(webcamframe, cv2.ROTATE_90_CLOCKWISE)
 
     while True:
-        #screenshot = Image.fromarray(webcamframe)
         
-        #screenshot = screenshot.rotate(ROTATE)
-        #screenshot = np.array(screenshot)
-        #frame = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
-        
-
         gray = cv2.cvtColor(webcamframe, cv2.COLOR_BGR2GRAY)
         thresh = cv2.threshold(gray, 170, 255,
 		cv2.THRESH_BINARY_INV)[1]
@@ -139,12 +135,7 @@ def scan(webcamframe, RESIZEFACTOR, s=-1):
         dim = (width, height)
         
         frame = cv2.resize(frame, dim, interpolation=cv2.INTER_LINEAR)
-        #try:
-            #frame = corrigir_perspectiva(frame+1)
-        #except:
-           # pass
         imrgb = cv2.resize(rotate(webcamframe, rts[tentativas%5]), dim, interpolation=cv2.INTER_LINEAR)
-        #imrgb = np.zeros((height,width,3), np.uint8)
         questão = 1
         item = 0
         itens = "ABCDE"
@@ -167,15 +158,10 @@ def scan(webcamframe, RESIZEFACTOR, s=-1):
                 x, y, w, h = rectangles[r]
                 dif = (w - default[0], h - default[1])
 
-                # if rectangles[r] in rectangles2
-                #print(rectangles[r], "AAA - ", rectangles2)
-
-                
                 if np.isin(rectangles[r], rectangles2).all():
                     w = np.where(rectangles2 == rectangles[r])
                     try:
                         index = w[0][0]
-                    #   print(index)
                         rectangles2[index] = x + int(dif[0] / 2), y + int(dif[1] / 2), rectangles[0][2], rectangles[0][3]
                     except:
                         pass
@@ -206,11 +192,11 @@ def scan(webcamframe, RESIZEFACTOR, s=-1):
             for c in linhas:
                 if len(c) == 5:
                     questoesValidas.append(c)
-                    
+                    """
                     cor = (0, 0, 255) if np.isin(c, rectangles2).all() else (255, 255, 0)
                 else:
                     cor = (255, 0, 255)
-                cv2.rectangle(imrgb, (c[0][0], c[0][1]), (c[-1][0] + c[-1][2], c[-1][1] + c[-1][3]), cor, 2)
+                cv2.rectangle(imrgb, (c[0][0], c[0][1]), (c[-1][0] + c[-1][2], c[-1][1] + c[-1][3]), cor, 2)"""
             questoesValidas.sort(key=lambda a: (a[0][1], a[0][0]))
 
 
@@ -227,20 +213,15 @@ def scan(webcamframe, RESIZEFACTOR, s=-1):
                             q = int(questão / 2 + 10)
                         else:
                             q = int((questão + 1) / 2)
-
-                        #cv2.putText(imrgb, str(q), (int(r[0]) - int(r[2] / 1.5), int(r[1]) + int(r[3] / 2)),
-                         #           cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 2, cv2.LINE_AA)
-                    
-                    #if np.all([np.all(x in rectangles2) for x in c]):
                     if np.isin(r, rectangles2).all():
                         results.append((q, itens[item % len(itens)]))
 
-                        cor = (255, 0, 255)
+                    """    cor = (255, 0, 255)
                     else:
                         cor = (255, 255, 255)
                     cv2.putText(imrgb, str(itens[item % 5]), (int(r[0]) + int(r[2] / 3), int(r[1]) + int(r[3] / 1.5)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 1, cor, 2, cv2.LINE_AA)
-                    cv2.rectangle(imrgb, (x, y), (x + w, y + h), (0, 255, 0), 1)
+                    cv2.rectangle(imrgb, (x, y), (x + w, y + h), (0, 255, 0), 1)"""
 
                     item += 1
                 questão += 1
@@ -249,12 +230,10 @@ def scan(webcamframe, RESIZEFACTOR, s=-1):
         lscale_percent = 25  # percent of original size
         width = int(detection_image.shape[1] * lscale_percent / 100)
         height = int(detection_image.shape[0] * lscale_percent / 100)
-        cv2.imshow("teste", resize(detection_image, width, height))
-        #import random
+        #cv2.imshow("teste", resize(detection_image, width, height))
         st = datetime.now().strftime('%d-%m-%Y%H-%M-%S')
-        print(f"tentativas/{st}.jpg")
-        cv2.imwrite(f"tentativas/{st}.jpg", detection_image)
-        cv2.waitKey(20)
+        #cv2.imwrite(f"tentativas/{st}.jpg", detection_image)
+        #cv2.waitKey(20)
         dim = (width, height)
 
         if len(results) > 0:
@@ -269,31 +248,3 @@ def scan(webcamframe, RESIZEFACTOR, s=-1):
         if len(resultados) > 4:
             melhorResultado(resultados)
             return True, organizar(melhorResultado(resultados))
-
-        
-        """
-        # Realizando tentativas
-        if len(resultados) <= 5:
-            if len(results) >= 5:
-                crto = True
-                ind = 1
-                for r in results:
-                    if r[0] != ind and r[0] != ind - 1:
-                        crto = False
-                    ind += 1
-                if crto:
-                    resultados.append(results)
-        else:
-            return True, organizar(resultados)
-  
-
-        if tentativas >= 5:
-            if len(resultados) > 0:
-                return True, organizar(resultados)
-            else:
-                tentativas = 0
-                rtentadas += 1
-        if rtentadas >= 3:
-            return False, organizar(melhorResultado)
-
-        tentativas += 1"""
